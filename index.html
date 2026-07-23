@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Microsoft JhengHei, Arial, sans-serif;
-            max-width: 850px;
+            max-width: 900px;
             margin: 20px auto;
             padding: 20px;
             background-color: #f4f6f9;
@@ -102,11 +102,44 @@
         }
         th, td {
             border: 1px solid #dee2e6;
-            padding: 12px;
+            padding: 10px 12px;
             text-align: left;
+            vertical-align: middle;
         }
         th { background-color: #007bff; color: white; }
         tr:nth-child(even) { background-color: #f8f9fa; }
+        
+        /* 刪除按鈕樣式 */
+        .del-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .del-btn:hover {
+            background-color: #bd2130;
+        }
+
+        /* 備註輸入框樣式 */
+        .note-input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .note-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
         .money-row {
             background-color: #fff9db !important;
             font-weight: bold;
@@ -165,7 +198,6 @@
         <div class="card">
             <h2>📦 所需補足材料總計</h2>
             
-            <!-- 打勾選項：以 64 個為一組 -->
             <div class="checkbox-container">
                 <label>
                     <input type="checkbox" id="toggleStackMode1" onchange="calculate()">
@@ -177,8 +209,10 @@
             <table id="resultTable">
                 <thead>
                     <tr>
+                        <th style="width: 70px; text-align: center;">操作</th>
                         <th>材料名稱</th>
                         <th>總數量</th>
+                        <th style="width: 35%;">備註</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -212,7 +246,6 @@
         <div class="card">
             <h2>📦 材料列表</h2>
 
-            <!-- 打勾選項：以 64 個為一組 -->
             <div class="checkbox-container">
                 <label>
                     <input type="checkbox" id="toggleStackMode2" onchange="calculateGem()">
@@ -224,8 +257,10 @@
             <table id="gemResultTable">
                 <thead>
                     <tr>
+                        <th style="width: 70px; text-align: center;">操作</th>
                         <th>材料名稱</th>
                         <th>所需總數量</th>
+                        <th style="width: 35%;">備註</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -254,7 +289,13 @@ function switchTab(evt, tabId) {
     evt.currentTarget.classList.add('active');
 }
 
-// 解析帶數量的文字 (如 "16煤礦" -> amount: 16, name: "煤礦")
+// 刪除該行材料
+function deleteRow(btn) {
+    const row = btn.closest('tr');
+    row.remove();
+}
+
+// 解析帶數量的文字
 function parseItem(val) {
     if (!val || val === "無" || val === 0) return null;
     if (typeof val === 'number') return { amount: val, name: "" };
@@ -264,7 +305,7 @@ function parseItem(val) {
     return { amount: 1, name: str };
 }
 
-// 格式化數量 (轉換 64 個為一組的邏輯)
+// 格式化數量 (64個換算組數)
 function formatQuantity(total, useStackMode) {
     if (!total || total <= 0) return '0';
     if (!useStackMode) return total.toLocaleString();
@@ -576,12 +617,16 @@ function calculate() {
     const tbody = document.querySelector("#resultTable tbody");
     tbody.innerHTML = "";
 
-    // 優先印出非金錢材料（套用數量轉換），最後高亮印出金錢
     for (let matName in totals) {
         if (totals[matName] > 0 && matName !== "金錢") {
             let tr = document.createElement("tr");
             let displayVal = formatQuantity(totals[matName], useStackMode);
-            tr.innerHTML = `<td><b>${matName}</b></td><td>${displayVal}</td>`;
+            tr.innerHTML = `
+                <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
+                <td><b>${matName}</b></td>
+                <td>${displayVal}</td>
+                <td><input type="text" class="note-input" placeholder="輸入自訂備註..."></td>
+            `;
             tbody.appendChild(tr);
         }
     }
@@ -589,7 +634,12 @@ function calculate() {
     if (totals["金錢"] > 0) {
         let tr = document.createElement("tr");
         tr.className = "money-row";
-        tr.innerHTML = `<td><b>💰 金錢 (Coins)</b></td><td><b>$ ${totals["金錢"].toLocaleString()}</b></td>`;
+        tr.innerHTML = `
+            <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
+            <td><b>💰 金錢 (Coins)</b></td>
+            <td><b>$ ${totals["金錢"].toLocaleString()}</b></td>
+            <td></td>
+        `;
         tbody.appendChild(tr);
     }
 }
@@ -617,7 +667,6 @@ function calculateGem() {
     const useStackMode = document.getElementById("toggleStackMode2").checked;
     let count = parseInt(document.getElementById("gemCountInput").value);
 
-    // 防呆機制：輸入負數、0 或非數字時預設為 1
     if (isNaN(count) || count < 1) {
         count = 1;
     }
@@ -650,7 +699,12 @@ function calculateGem() {
         if (totals[matName] > 0 && matName !== "金錢") {
             let tr = document.createElement("tr");
             let displayVal = formatQuantity(totals[matName], useStackMode);
-            tr.innerHTML = `<td><b>${matName}</b></td><td>${displayVal}</td>`;
+            tr.innerHTML = `
+                <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
+                <td><b>${matName}</b></td>
+                <td>${displayVal}</td>
+                <td><input type="text" class="note-input" placeholder="輸入自訂備註..."></td>
+            `;
             tbody.appendChild(tr);
         }
     }
@@ -658,7 +712,12 @@ function calculateGem() {
     if (totals["金錢"] > 0) {
         let tr = document.createElement("tr");
         tr.className = "money-row";
-        tr.innerHTML = `<td><b>💰 金錢 (Coins)</b></td><td><b>$ ${totals["金錢"].toLocaleString()}</b></td>`;
+        tr.innerHTML = `
+            <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
+            <td><b>💰 金錢 (Coins)</b></td>
+            <td><b>$ ${totals["金錢"].toLocaleString()}</b></td>
+            <td></td>
+        `;
         tbody.appendChild(tr);
     }
 }
