@@ -70,6 +70,31 @@
             background-color: #fff;
             box-sizing: border-box;
         }
+        
+        .checkbox-container {
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            display: inline-block;
+        }
+        .checkbox-container label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 0;
+            font-size: 14px;
+            color: #212529;
+        }
+        .checkbox-container input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -139,6 +164,15 @@
 
         <div class="card">
             <h2>📦 所需補足材料總計</h2>
+            
+            <!-- 打勾選項：以 64 個為一組 -->
+            <div class="checkbox-container">
+                <label>
+                    <input type="checkbox" id="toggleStackMode1" onchange="calculate()">
+                    以一組 64 個為單位顯示數量
+                </label>
+            </div>
+
             <p id="infoText" style="color: #666;"></p>
             <table id="resultTable">
                 <thead>
@@ -177,6 +211,15 @@
 
         <div class="card">
             <h2>📦 材料列表</h2>
+
+            <!-- 打勾選項：以 64 個為一組 -->
+            <div class="checkbox-container">
+                <label>
+                    <input type="checkbox" id="toggleStackMode2" onchange="calculateGem()">
+                    以一組 64 個為單位顯示數量
+                </label>
+            </div>
+
             <p id="gemInfoText" style="color: #666;"></p>
             <table id="gemResultTable">
                 <thead>
@@ -221,7 +264,25 @@ function parseItem(val) {
     return { amount: 1, name: str };
 }
 
-// 藥水與戒指數據（已包含各階級金錢需求）
+// 格式化數量 (轉換 64 個為一組的邏輯)
+function formatQuantity(total, useStackMode) {
+    if (!total || total <= 0) return '0';
+    if (!useStackMode) return total.toLocaleString();
+
+    const stackSize = 64;
+    const stacks = Math.floor(total / stackSize);
+    const remainder = total % stackSize;
+
+    if (stacks > 0 && remainder > 0) {
+        return `${stacks} 組 + ${remainder} 個 (${total.toLocaleString()})`;
+    } else if (stacks > 0) {
+        return `${stacks} 組 (${total.toLocaleString()})`;
+    } else {
+        return `${remainder} 個`;
+    }
+}
+
+// 藥水與戒指數據
 const gameData = {
     "經驗": {
         stages: ["0階 (無)", "一階", "二階", "三階", "四階", "五階", "六階", "七階"],
@@ -304,7 +365,7 @@ const gameData = {
     }
 };
 
-// 寶石專用數據 (來自「寶石」工作頁)
+// 寶石專用數據
 const gemData = {
     "黃寶石": {
         stages: ["一階", "二階(需10等)", "三階(需20等)", "四階(需30等)", "五階(需40等)", "六階(需50等)"],
@@ -458,6 +519,7 @@ function calculate() {
     const itemName = document.getElementById("itemSelect").value;
     const startIdx = parseInt(document.getElementById("startStageSelect").value);
     const endIdx = parseInt(document.getElementById("endStageSelect").value);
+    const useStackMode = document.getElementById("toggleStackMode1").checked;
     const itemInfo = gameData[itemName];
     
     let totals = {};
@@ -514,11 +576,12 @@ function calculate() {
     const tbody = document.querySelector("#resultTable tbody");
     tbody.innerHTML = "";
 
-    // 優先印出非金錢材料，最後高亮印出金錢
+    // 優先印出非金錢材料（套用數量轉換），最後高亮印出金錢
     for (let matName in totals) {
         if (totals[matName] > 0 && matName !== "金錢") {
             let tr = document.createElement("tr");
-            tr.innerHTML = `<td><b>${matName}</b></td><td>${totals[matName].toLocaleString()}</td>`;
+            let displayVal = formatQuantity(totals[matName], useStackMode);
+            tr.innerHTML = `<td><b>${matName}</b></td><td>${displayVal}</td>`;
             tbody.appendChild(tr);
         }
     }
@@ -551,6 +614,7 @@ function updateGemStages() {
 function calculateGem() {
     const gemType = document.getElementById("gemTypeSelect").value;
     const stageIdx = parseInt(document.getElementById("gemStageSelect").value);
+    const useStackMode = document.getElementById("toggleStackMode2").checked;
     let count = parseInt(document.getElementById("gemCountInput").value);
 
     // 防呆機制：輸入負數、0 或非數字時預設為 1
@@ -585,7 +649,8 @@ function calculateGem() {
     for (let matName in totals) {
         if (totals[matName] > 0 && matName !== "金錢") {
             let tr = document.createElement("tr");
-            tr.innerHTML = `<td><b>${matName}</b></td><td>${totals[matName].toLocaleString()}</td>`;
+            let displayVal = formatQuantity(totals[matName], useStackMode);
+            tr.innerHTML = `<td><b>${matName}</b></td><td>${displayVal}</td>`;
             tbody.appendChild(tr);
         }
     }
