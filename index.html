@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲綜合製作材料計算機</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Microsoft JhengHei, Arial, sans-serif;
+            max-width: 850px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 25px; }
+        
+        .tab-menu {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid #007bff;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background-color: #e9ecef;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            color: #495057;
+            transition: all 0.2s ease;
+        }
+        .tab-btn:hover { background-color: #dee2e6; }
+        .tab-btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group { flex: 1; }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #495057;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            font-size: 16px;
+            background-color: #fff;
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        .money-row {
+            background-color: #fff9db !important;
+            font-weight: bold;
+            color: #d97706;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        footer p { margin: 5px 0; }
+        footer .author-name { font-weight: bold; color: #f1c40f; }
+        footer .discord-tag { font-family: monospace; background: #34495e; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>🎮 遊戲綜合製作材料計算機</h1>
+
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab1')">藥水與戒指計算機</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab2')">各類寶石</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab3')">未來擴充類別 B</button>
+    </div>
+
+    <!-- 分頁一：藥水與戒指 -->
+    <div id="tab1" class="tab-content active">
+        <div class="card">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="itemSelect">選擇物品 / 工作頁：</label>
+                <select id="itemSelect" onchange="updateStageOptions()">
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startStageSelect">目前持有 (起始階級)：</label>
+                    <select id="startStageSelect" onchange="validateAndCalculate()">
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="endStageSelect">目標升級至 (目標階級)：</label>
+                    <select id="endStageSelect" onchange="validateAndCalculate()">
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📦 所需補足材料總計</h2>
+            <p id="infoText" style="color: #666;"></p>
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th>材料名稱</th>
+                        <th>總數量</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 分頁二：各類寶石 -->
+    <div id="tab2" class="tab-content">
+        <div class="card">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="gemTypeSelect">寶石種類 (選單)：</label>
+                    <select id="gemTypeSelect" onchange="updateGemStages()">
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="gemStageSelect">寶石階級：</label>
+                    <select id="gemStageSelect" onchange="calculateGem()">
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="gemCountInput">製作數量 (只能輸入數字)：</label>
+                <input type="number" id="gemCountInput" value="1" min="1" step="1" oninput="calculateGem()">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📦 材料列表</h2>
+            <p id="gemInfoText" style="color: #666;"></p>
+            <table id="gemResultTable">
+                <thead>
+                    <tr>
+                        <th>材料名稱</th>
+                        <th>所需總數量</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 分頁三：預留頁 B -->
+    <div id="tab3" class="tab-content">
+        <div class="card">
+            <h2>🛡️ 未來新增功能預留頁 B</h2>
+        </div>
+    </div>
+
+    <footer>
+        <p>作者：<span class="author-name">風狗TW_dog_pwp</span></p>
+        <p>Discord：<span class="discord-tag">.windog_</span></p>
+    </footer>
+
+<script>
+function switchTab(evt, tabId) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+}
+
+// 解析帶數量的文字 (如 "16煤礦" -> amount: 16, name: "煤礦")
+function parseItem(val) {
+    if (!val || val === "無" || val === 0) return null;
+    if (typeof val === 'number') return { amount: val, name: "" };
+    const str = String(val).trim();
+    const match = str.match(/^(\d+)(.+)$/);
+    if (match) return { amount: parseInt(match[1]), name: match[2].trim() };
+    return { amount: 1, name: str };
+}
+
+// 藥水與戒指數據（已包含各階級金錢需求）
+const gameData = {
+    "經驗": {
+        stages: ["0階 (無)", "一階", "二階", "三階", "四階", "五階", "六階", "七階"],
+        data: [
+            { stage: "一階", 採集精華: 10, 材料: "120野莓", 星河結晶: 20, 下品星石: 20, 中品星石: 0, 藥劑瓶: 20, 金錢: 2000 },
+            { stage: "二階", 採集精華: 15, 材料: "150仙人掌", 星河結晶: 30, 下品星石: 30, 中品星石: 1, 藥劑瓶: 30, 金錢: 4000 },
+            { stage: "三階", 採集精華: 20, 材料: "200四葉草", 星河結晶: 40, 下品星石: 40, 中品星石: 2, 藥劑瓶: 40, 金錢: 6000 },
+            { stage: "四階", 採集精華: 25, 材料: "300四葉草", 星河結晶: 50, 下品星石: 50, 中品星石: 3, 藥劑瓶: 50, 金錢: 8000 },
+            { stage: "五階", 採集精華: 30, 材料: "400發光蘑菇", 星河結晶: 60, 下品星石: 60, 中品星石: 4, 藥劑瓶: 60, 金錢: 10000 },
+            { stage: "六階", 採集精華: 35, 材料: "500魔法藥草", 星河結晶: 60, 下品星石: 60, 中品星石: 5, 藥劑瓶: 70, 金錢: 15000 },
+            { stage: "七階", 採集精華: 60, 材料: "600死亡之花", 星河結晶: 120, 下品星石: 120, 中品星石: 10, 藥劑瓶: 100, 金錢: 20000 }
+        ]
+    },
+    "究極經驗": {
+        stages: ["0階 (無)", "一階", "二階", "三階", "四階", "五階", "六階", "七階"],
+        ringMapping: [0, 1, 3, 5, 7, 9, 11, 13],
+        data: [
+            { stage: "一階", 採集精華: 30, 材料: "300野莓", 星河結晶: 20, 下品星石: 20, 中品星石: 0, 藥劑瓶: 100, 金錢: 5000 },
+            { stage: "二階", 採集精華: 35, 材料: "400仙人掌", 星河結晶: 30, 下品星石: 30, 中品星石: 1, 藥劑瓶: 150, 金錢: 10000 },
+            { stage: "三階", 採集精華: 40, 材料: "500四葉草", 星河結晶: 40, 下品星石: 40, 中品星石: 2, 藥劑瓶: 200, 金錢: 15000 },
+            { stage: "四階", 採集精華: 45, 材料: "600四葉草", 星河結晶: 50, 下品星石: 50, 中品星石: 3, 藥劑瓶: 250, 金錢: 20000 },
+            { stage: "五階", 採集精華: 50, 材料: "700發光蘑菇", 星河結晶: 60, 下品星石: 60, 中品星石: 4, 藥劑瓶: 300, 金錢: 25000 },
+            { stage: "六階", 採集精華: 55, 材料: "800魔法藥草", 星河結晶: 70, 下品星石: 70, 中品星石: 5, 藥劑瓶: 350, 金錢: 35000 },
+            { stage: "七階", 採集精華: 60, 材料: "900死亡之花", 星河結晶: 120, 下品星石: 120, 中品星石: 10, 藥劑瓶: 400, 金錢: 50000 }
+        ]
+    },
+    "庇護": {
+        stages: ["0階 (無)", "一階", "二階", "三階", "四階", "五階", "六階", "七階"],
+        data: [
+            { stage: "一階", 採集精華: 10, 材料: "120野莓", 星河結晶: 20, 下品星石: 20, 中品星石: 0, 藥劑瓶: 10, 金錢: 2000 },
+            { stage: "二階", 採集精華: 15, 材料: "150仙人掌", 星河結晶: 30, 下品星石: 30, 中品星石: 1, 藥劑瓶: 20, 金錢: 4000 },
+            { stage: "三階", 採集精華: 20, 材料: "200四葉草", 星河結晶: 40, 下品星石: 40, 中品星石: 2, 藥劑瓶: 30, 金錢: 6000 },
+            { stage: "四階", 採集精華: 25, 材料: "300四葉草", 星河結晶: 50, 下品星石: 50, 中品星石: 3, 藥劑瓶: 40, 金錢: 8000 },
+            { stage: "五階", 採集精華: 30, 材料: "400發光蘑菇", 星河結晶: 60, 下品星石: 60, 中品星石: 4, 藥劑瓶: 50, 金錢: 10000 },
+            { stage: "六階", 採集精華: 35, 材料: "400魔法藥草", 星河結晶: 60, 下品星石: 60, 中品星石: 5, 藥劑瓶: 50, 金錢: 15000 },
+            { stage: "七階", 採集精華: 60, 材料: "500死亡之花", 星河結晶: 120, 下品星石: 120, 中品星石: 5, 藥劑瓶: 100, 金錢: 20000 }
+        ]
+    },
+    "龍焰": {
+        stages: ["0階 (無)", "一階", "二階", "三階", "四階", "五階", "六階", "七階"],
+        data: [
+            { stage: "一階", 採集精華: 10, 材料: "120野莓", 星河結晶: 20, 下品星石: 20, 中品星石: 0, 藥劑瓶: 10, 金錢: 2000 },
+            { stage: "二階", 採集精華: 15, 材料: "150仙人掌", 星河結晶: 30, 下品星石: 30, 中品星石: 1, 藥劑瓶: 20, 金錢: 4000 },
+            { stage: "三階", 採集精華: 20, 材料: "200四葉草", 星河結晶: 40, 下品星石: 40, 中品星石: 2, 藥劑瓶: 30, 金錢: 6000 },
+            { stage: "四階", 採集精華: 25, 材料: "300四葉草", 星河結晶: 50, 下品星石: 50, 中品星石: 3, 藥劑瓶: 40, 金錢: 8000 },
+            { stage: "五階", 採集精華: 30, 材料: "400發光蘑菇", 星河結晶: 60, 下品星石: 60, 中品星石: 3, 藥劑瓶: 50, 金錢: 10000 },
+            { stage: "六階", 採集精華: 30, 材料: "400魔法藥草", 星河結晶: 60, 下品星石: 60, 中品星石: 4, 藥劑瓶: 50, 金錢: 15000 },
+            { stage: "七階", 採集精華: 60, 材料: "500死亡之花", 星河結晶: 120, 下品星石: 120, 中品星石: 5, 藥劑瓶: 100, 金錢: 20000 }
+        ]
+    },
+    "海潮": {
+        stages: ["0階 (無)", "一階", "二階", "三階", "四階", "五階", "六階", "七階"],
+        data: [
+            { stage: "一階", 採集精華: 20, 材料: "250野莓", 星河結晶: 20, 下品星石: 20, 中品星石: 0, 藥劑瓶: 50, 金錢: 3000 },
+            { stage: "二階", 採集精華: 25, 材料: "300仙人掌", 星河結晶: 30, 下品星石: 30, 中品星石: 1, 藥劑瓶: 60, 金錢: 6000 },
+            { stage: "三階", 採集精華: 30, 材料: "350四葉草", 星河結晶: 40, 下品星石: 40, 中品星石: 2, 藥劑瓶: 70, 金錢: 9000 },
+            { stage: "四階", 採集精華: 35, 材料: "400四葉草", 星河結晶: 50, 下品星石: 50, 中品星石: 3, 藥劑瓶: 80, 金錢: 12000 },
+            { stage: "五階", 採集精華: 40, 材料: "450發光蘑菇", 星河結晶: 60, 下品星石: 60, 中品星石: 4, 藥劑瓶: 90, 金錢: 15000 },
+            { stage: "六階", 採集精華: 45, 材料: "500魔法藥草", 星河結晶: 60, 下品星石: 60, 中品星石: 5, 藥劑瓶: 100, 金錢: 20000 },
+            { stage: "七階", 採集精華: 50, 材料: "600死亡之花", 星河結晶: 120, 下品星石: 120, 中品星石: 10, 藥劑瓶: 110, 金錢: 30000 }
+        ]
+    },
+    "經驗戒指": {
+        stages: ["0階 (無)", "一階", "二階", "三階", "四階", "五階", "六階", "七階", "八階", "九階", "十階", "十一階", "十二階", "十三階"],
+        data: [
+            { stage: "一階", 礦物精華: 1, 礦物: "4煤炭", 星河結晶: 4, 下品星石: 4, 王掉落物: "無", 掉落物1: "4幽靈錨鏈", 掉落物2: "4漁人斥侯之鰭", 掉落物3: "4沙灘螃蟹殼", 金錢: 1000 },
+            { stage: "二階", 礦物精華: 1, 礦物: "4煤炭", 星河結晶: 4, 下品星石: 4, 王掉落物: "黑牙徽章", 掉落物1: "4狂斧殘鐵", 掉落物2: "4散兵之羽", 掉落物3: "4暗影潛行布", 金錢: 2000 },
+            { stage: "三階", 礦物精華: 1, 礦物: "8銅礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "靈魂守護碎片", 掉落物1: "8哀嚎水晶", 掉落物2: "8受詛咒的腐肉", 掉落物3: "8安寧怨靈之息", 金錢: 3000 },
+            { stage: "四階", 礦物精華: 1, 礦物: "8銅礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "迷失礦王之冠", 掉落物1: "8變異蝙蝠翼", 掉落物2: "8礦坑毒液", 掉落物3: "8墮落礦核", 金錢: 4000 },
+            { stage: "五階", 礦物精華: 1, 礦物: "8鐵礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "焰影港徽章", 掉落物1: "8焰影咒典", 掉落物2: "8焰影彎刀殘片", 掉落物3: "8焰影風帆布", 金錢: 5000 },
+            { stage: "六階", 礦物精華: 1, 礦物: "8鐵礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "墮落領主之核", 掉落物1: "12詛咒獵犬之牙", 掉落物2: "12暗影怨靈精華", 掉落物3: "12殘破護甲片", 金錢: 6000 },
+            { stage: "七階", 礦物精華: 1, 礦物: "12鐵礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "雷奧尼斯徽印", 掉落物1: "12暗布殘絮", 掉落物2: "12暗影粉末", 掉落物3: "12詛咒符文", 金錢: 8000 },
+            { stage: "八階", 礦物精華: 1, 礦物: "12鐵礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "烈焰核心", 掉落物1: "16試煉之灰", 掉落物2: "16焦灼聖印", 掉落物3: "16熾焰碎片", 金錢: 10000 },
+            { stage: "九階", 礦物精華: 1, 礦物: "16金礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "暴風之心", 掉落物1: "16風之核心", 掉落物2: "16銹鐵板片", 掉落物3: "16稻靈纖維", 金錢: 12000 },
+            { stage: "十階", 礦物精華: 1, 礦物: "16金礦", 星河結晶: 4, 下品星石: 4, 王掉落物: "納奧斯之魂晶", 掉落物1: "16墓石核心", 掉落物2: "16詛咒精華", 掉落物3: "16腐蝕骨片", 金錢: 15000 },
+            { stage: "十一階", 礦物精華: 1, 礦物: "20紅石", 星河結晶: 4, 下品星石: 4, 王掉落物: "哈洛德冰徽", 掉落物1: "20寒狼尖牙", 掉落物2: "20霜咒之心", 掉落物3: "20霜血鋼鐵", 金錢: 20000 },
+            { stage: "十二階", 礦物精華: 1, 礦物: "24紅石", 星河結晶: 4, 下品星石: 4, 王掉落物: "阿爾瑪迪斯", 掉落物1: "24獄紋咒印", 掉落物2: "24熔心核晶", 掉落物3: "24灼魂之焰", 金錢: 25000 },
+            { stage: "十三階", 礦物精華: 1, 礦物: "24藍寶", 星河結晶: 4, 下品星石: 4, 王掉落物: "永燃王之心", 掉落物1: "24黑燼核碎", 掉落物2: "24灰燼咒頁", 掉落物3: "24誓炎徽印", 金錢: 30000 }
+        ]
+    }
+};
+
+// 寶石專用數據 (來自「寶石」工作頁)
+const gemData = {
+    "黃寶石": {
+        stages: ["一階", "二階", "三階", "四階", "五階", "六階"],
+        items: {
+            "寶石碎片": [8, 8, 8, 8, 8, 8],
+            "礦物精華": [1, 1, 1, 1, 1, 1],
+            "星河結晶": [4, 4, 4, 4, 4, 4],
+            "下品星石": [4, 4, 4, 4, 4, 4],
+            "掉落物1": ["8幽靈錨鏈", "8哀嚎水晶", "8詛咒獵犬之牙", "8焦灼遺物", "8墓石核心", "8熔核外殼"],
+            "掉落物2": ["8漁人斥侯之鰭", "8受詛咒的腐肉", "8暗影怨靈精華", "8聖灰", "8詛咒精華", "8獄焰祭符"],
+            "掉落物3": ["8沙灘螃蟹殼", "8安寧怨靈之息", "8殘破護甲片", "8光耀碎片", "8腐蝕骨片", "煉焰合金核"],
+            "礦物": ["16煤礦", "16銅礦", "16鐵礦", "16金礦", "16紅石", "16藍寶"],
+        }
+    },
+    "藍寶石": {
+        stages: ["一階", "二階", "三階", "四階", "五階", "六階"],
+        items: {
+            "寶石碎片": [10, 10, 10, 10, 10, 10],
+            "星河結晶": [8, 8, 8, 8, 8, 8],
+            "下品星石": [8, 8, 8, 8, 8, 8],
+            "掉落物1": ["8幽靈錨鏈", "8哀嚎水晶", "8詛咒獵犬之牙", "8焦灼遺物", "8墓石核心", "8熔核外殼"],
+            "掉落物2": ["8漁人斥侯之鰭", "8受詛咒的腐肉", "8暗影怨靈精華", "8聖灰", "8詛咒精華", "8獄焰祭符"],
+            "掉落物3": ["8沙灘螃蟹殼", "8安寧怨靈之息", "8殘破護甲片", "8光耀碎片", "8腐蝕骨片", "煉焰合金核"],
+            "礦物": ["16煤礦", "16銅礦", "16鐵礦", "16金礦", "16紅石", "16藍寶"],
+        }
+    },
+    "紅寶石": {
+        stages: ["一階", "二階", "三階", "四階", "五階", "六階"],
+        items: {
+            "寶石碎片": [10, 10, 10, 10, 10, 10],
+            "礦物精華": [0, 0, 0, 1, 1, 1],
+            "星河結晶": [8, 8, 8, 8, 8, 8],
+            "下品星石": [8, 8, 8, 8, 8, 8],
+            "掉落物1": ["8幽靈錨鏈", "8哀嚎水晶", "8詛咒獵犬之牙", "8焦灼遺物", "8墓石核心", "8熔核外殼"],
+            "掉落物2": ["8漁人斥侯之鰭", "8受詛咒的腐肉", "8暗影怨靈精華", "8聖灰", "8詛咒精華", "8獄焰祭符"],
+            "掉落物3": ["8沙灘螃蟹殼", "8安寧怨靈之息", "8殘破護甲片", "8光耀碎片", "8腐蝕骨片", "煉焰合金核"],
+            "礦物": ["16煤礦", "16銅礦", "16鐵礦", "16金礦", "16紅石", "16藍寶"],
+        }
+    },
+    "綠寶石": {
+        stages: ["一階", "二階", "三階", "四階", "五階", "六階"],
+        items: {
+            "寶石碎片": [8, 8, 8, 8, 8, 8],
+            "礦物精華": [1, 1, 1, 1, 1, 1],
+            "星河結晶": [4, 4, 4, 4, 4, 4],
+            "下品星石": [4, 4, 4, 4, 4, 4],
+            "掉落物1": ["8幽靈錨鏈", "8哀嚎水晶", "8詛咒獵犬之牙", "8焦灼遺物", "8墓石核心", "8熔核外殼"],
+            "掉落物2": ["8漁人斥侯之鰭", "8受詛咒的腐肉", "8暗影怨靈精華", "8聖灰", "8詛咒精華", "8獄焰祭符"],
+            "掉落物3": ["8沙灘螃蟹殼", "8安寧怨靈之息", "8殘破護甲片", "8光耀碎片", "8腐蝕骨片", "煉焰合金核"],
+            "礦物": ["16煤礦", "16銅礦", "16鐵礦", "16金礦", "16紅石", "16藍寶"],
+        }
+    },
+    "白寶石": {
+        stages: ["一階", "二階", "三階", "四階", "五階", "六階"],
+        items: {
+            "寶石碎片": [10, 10, 10, 10, 10, 10],
+            "星河結晶": [8, 8, 8, 8, 8, 8],
+            "下品星石": [8, 8, 8, 8, 8, 8],
+            "掉落物1": ["8幽靈錨鏈", "8哀嚎水晶", "8詛咒獵犬之牙", "8焦灼遺物", "8墓石核心", "8熔核外殼"],
+            "掉落物2": ["8漁人斥侯之鰭", "8受詛咒的腐肉", "8暗影怨靈精華", "8聖灰", "8詛咒精華", "8獄焰祭符"],
+            "掉落物3": ["8沙灘螃蟹殼", "8安寧怨靈之息", "8殘破護甲片", "8光耀碎片", "8腐蝕骨片", "煉焰合金核"],
+            "礦物": ["16煤礦", "16銅礦", "16鐵礦", "16金礦", "16紅石", "16藍寶"],
+        }
+    }
+};
+
+window.onload = function() {
+    // 載入分頁一的下拉選單
+    const itemSelect = document.getElementById("itemSelect");
+    for (let key in gameData) {
+        let opt = document.createElement("option");
+        opt.value = key;
+        opt.innerText = key;
+        itemSelect.appendChild(opt);
+    }
+    updateStageOptions();
+
+    // 載入分頁二的寶石選單
+    const gemTypeSelect = document.getElementById("gemTypeSelect");
+    for (let gem in gemData) {
+        let opt = document.createElement("option");
+        opt.value = gem;
+        opt.innerText = gem;
+        gemTypeSelect.appendChild(opt);
+    }
+    updateGemStages();
+};
+
+/* --- 分頁一邏輯 --- */
+function updateStageOptions() {
+    const selectedItem = document.getElementById("itemSelect").value;
+    const startSelect = document.getElementById("startStageSelect");
+    const endSelect = document.getElementById("endStageSelect");
+    
+    startSelect.innerHTML = "";
+    endSelect.innerHTML = "";
+    
+    const stages = gameData[selectedItem].stages;
+    
+    stages.forEach((stage, idx) => {
+        let optStart = document.createElement("option");
+        optStart.value = idx;
+        optStart.innerText = stage;
+        startSelect.appendChild(optStart);
+
+        let optEnd = document.createElement("option");
+        optEnd.value = idx;
+        optEnd.innerText = stage;
+        endSelect.appendChild(optEnd);
+    });
+
+    startSelect.value = 0;
+    endSelect.value = stages.length - 1;
+
+    calculate();
+}
+
+function validateAndCalculate() {
+    const startIdx = parseInt(document.getElementById("startStageSelect").value);
+    const endIdx = parseInt(document.getElementById("endStageSelect").value);
+
+    if (startIdx > endIdx) {
+        document.getElementById("endStageSelect").value = startIdx;
+    }
+    calculate();
+}
+
+function addSingleRingMaterials(totals, targetRingTier) {
+    const ringData = gameData["經驗戒指"].data;
+    for (let t = 0; t < targetRingTier; t++) {
+        let row = ringData[t];
+        totals["礦物精華"] = (totals["礦物精華"] || 0) + row.礦物精華;
+        totals["星河結晶"] = (totals["星河結晶"] || 0) + row.星河結晶;
+        totals["下品星石"] = (totals["下品星石"] || 0) + row.下品星石;
+        if (row.金錢) totals["金錢"] = (totals["金錢"] || 0) + row.金錢;
+
+        let m = parseItem(row.礦物);
+        if (m) totals[m.name] = (totals[m.name] || 0) + m.amount;
+
+        let boss = parseItem(row.王掉落物);
+        if (boss) totals[boss.name] = (totals[boss.name] || 0) + boss.amount;
+
+        ["掉落物1", "掉落物2", "掉落物3"].forEach(key => {
+            let drop = parseItem(row[key]);
+            if (drop) totals[drop.name] = (totals[drop.name] || 0) + drop.amount;
+        });
+    }
+}
+
+function calculate() {
+    const itemName = document.getElementById("itemSelect").value;
+    const startIdx = parseInt(document.getElementById("startStageSelect").value);
+    const endIdx = parseInt(document.getElementById("endStageSelect").value);
+    const itemInfo = gameData[itemName];
+    
+    let totals = {};
+    let infoMsg = `計算範圍：持有 <b>${itemInfo.stages[startIdx]}</b> ➔ 目標升至 <b>${itemInfo.stages[endIdx]}</b>`;
+
+    if (itemName === "經驗戒指") {
+        const ringData = gameData["經驗戒指"].data;
+        for (let t = startIdx; t < endIdx; t++) {
+            let row = ringData[t];
+            totals["礦物精華"] = (totals["礦物精華"] || 0) + row.礦物精華;
+            totals["星河結晶"] = (totals["星河結晶"] || 0) + row.星河結晶;
+            totals["下品星石"] = (totals["下品星石"] || 0) + row.下品星石;
+            if (row.金錢) totals["金錢"] = (totals["金錢"] || 0) + row.金錢;
+
+            let m = parseItem(row.礦物);
+            if (m) totals[m.name] = (totals[m.name] || 0) + m.amount;
+
+            let boss = parseItem(row.王掉落物);
+            if (boss) totals[boss.name] = (totals[boss.name] || 0) + boss.amount;
+
+            ["掉落物1", "掉落物2", "掉落物3"].forEach(key => {
+                let drop = parseItem(row[key]);
+                if (drop) totals[drop.name] = (totals[drop.name] || 0) + drop.amount;
+            });
+        }
+    } else {
+        for (let i = startIdx; i < endIdx; i++) {
+            let row = itemInfo.data[i];
+            totals["採集精華"] = (totals["採集精華"] || 0) + row.採集精華;
+            totals["星河結晶"] = (totals["星河結晶"] || 0) + row.星河結晶;
+            totals["下品星石"] = (totals["下品星石"] || 0) + row.下品星石;
+            if (row.中品星石 !== undefined) totals["中品星石"] = (totals["中品星石"] || 0) + row.中品星石;
+            if (row.藥劑瓶 !== undefined) totals["藥劑瓶"] = (totals["藥劑瓶"] || 0) + row.藥劑瓶;
+            if (row.金錢 !== undefined) totals["金錢"] = (totals["金錢"] || 0) + row.金錢;
+
+            if (row.材料) {
+                let parsed = parseItem(row.材料);
+                if (parsed) totals[parsed.name] = (totals[parsed.name] || 0) + parsed.amount;
+            }
+        }
+
+        if (itemName === "究極經驗") {
+            infoMsg += `<br><b>※ 消耗機制：製作每階藥水皆需額外獻祭 1 枚獨立製作的對應階數經驗戒指！</b>`;
+            for (let i = startIdx; i < endIdx; i++) {
+                let consumedRingTier = itemInfo.ringMapping[i + 1];
+                if (consumedRingTier > 0) {
+                    addSingleRingMaterials(totals, consumedRingTier);
+                }
+            }
+        }
+    }
+
+    document.getElementById("infoText").innerHTML = infoMsg;
+    const tbody = document.querySelector("#resultTable tbody");
+    tbody.innerHTML = "";
+
+    // 優先印出非金錢材料，最後高亮印出金錢
+    for (let matName in totals) {
+        if (totals[matName] > 0 && matName !== "金錢") {
+            let tr = document.createElement("tr");
+            tr.innerHTML = `<td><b>${matName}</b></td><td>${totals[matName].toLocaleString()}</td>`;
+            tbody.appendChild(tr);
+        }
+    }
+
+    if (totals["金錢"] > 0) {
+        let tr = document.createElement("tr");
+        tr.className = "money-row";
+        tr.innerHTML = `<td><b>💰 金錢 (Coins)</b></td><td><b>$ ${totals["金錢"].toLocaleString()}</b></td>`;
+        tbody.appendChild(tr);
+    }
+}
+
+/* --- 分頁二：各類寶石邏輯 --- */
+function updateGemStages() {
+    const gemType = document.getElementById("gemTypeSelect").value;
+    const gemStageSelect = document.getElementById("gemStageSelect");
+    gemStageSelect.innerHTML = "";
+
+    const stages = gemData[gemType].stages;
+    stages.forEach((st, idx) => {
+        let opt = document.createElement("option");
+        opt.value = idx;
+        opt.innerText = st;
+        gemStageSelect.appendChild(opt);
+    });
+
+    calculateGem();
+}
+
+function calculateGem() {
+    const gemType = document.getElementById("gemTypeSelect").value;
+    const stageIdx = parseInt(document.getElementById("gemStageSelect").value);
+    let count = parseInt(document.getElementById("gemCountInput").value);
+
+    // 防呆機制：輸入負數、0 或非數字時預設為 1
+    if (isNaN(count) || count < 1) {
+        count = 1;
+    }
+
+    const stageName = gemData[gemType].stages[stageIdx];
+    const items = gemData[gemType].items;
+    
+    let totals = {};
+
+    for (let key in items) {
+        let val = items[key][stageIdx];
+        if (val !== undefined && val !== null && val !== 0 && val !== "0") {
+            if (key === "金錢" || key === "money") {
+                totals["金錢"] = (totals["金錢"] || 0) + (val * count);
+            } else {
+                let parsed = parseItem(val);
+                if (parsed) {
+                    let name = parsed.name || key;
+                    totals[name] = (totals[name] || 0) + (parsed.amount * count);
+                }
+            }
+        }
+    }
+
+    document.getElementById("gemInfoText").innerHTML = `製作目標：<b>${gemType} (${stageName})</b> × <b>${count}</b> 個`;
+    const tbody = document.querySelector("#gemResultTable tbody");
+    tbody.innerHTML = "";
+
+    for (let matName in totals) {
+        if (totals[matName] > 0 && matName !== "金錢") {
+            let tr = document.createElement("tr");
+            tr.innerHTML = `<td><b>${matName}</b></td><td>${totals[matName].toLocaleString()}</td>`;
+            tbody.appendChild(tr);
+        }
+    }
+
+    if (totals["金錢"] > 0) {
+        let tr = document.createElement("tr");
+        tr.className = "money-row";
+        tr.innerHTML = `<td><b>💰 金錢 (Coins)</b></td><td><b>$ ${totals["金錢"].toLocaleString()}</b></td>`;
+        tbody.appendChild(tr);
+    }
+}
+</script>
+
+</body>
+</html>
