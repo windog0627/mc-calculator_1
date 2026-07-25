@@ -146,6 +146,22 @@
             color: #d97706;
         }
 
+        /* 獻祭戒指獨立區塊樣式 */
+        .ring-section {
+            display: none;
+            margin-top: 30px;
+            border-top: 2px dashed #007bff;
+            padding-top: 20px;
+        }
+        .ring-section h3 {
+            color: #d9534f;
+            margin-top: 0;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         footer {
             margin-top: 40px;
             padding: 20px;
@@ -196,7 +212,7 @@
         </div>
 
         <div class="card">
-            <h2>📦 所需補足材料總計</h2>
+            <h2>📦 所需藥水本體材料總計</h2>
             
             <div class="checkbox-container">
                 <label>
@@ -218,6 +234,26 @@
                 <tbody>
                 </tbody>
             </table>
+
+            <!-- 戒指材料拆分區塊 -->
+            <div id="ringResultSection" class="ring-section">
+                <h3>💍 所需之「經驗戒指」材料總計</h3>
+                <p style="color: #856404; background-color: #fff3cd; padding: 8px 12px; border-radius: 4px; font-size: 14px; margin-bottom: 15px;">
+                    ※ 以下材料為製作各階獻祭戒指所需：
+                </p>
+                <table id="ringResultTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px; text-align: center;">操作</th>
+                            <th>材料名稱</th>
+                            <th>總數量</th>
+                            <th style="width: 35%;">備註</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -320,6 +356,38 @@ function formatQuantity(total, useStackMode) {
         return `${stacks} 組 (${total.toLocaleString()})`;
     } else {
         return `${remainder} 個`;
+    }
+}
+
+// 通用渲染表格函式
+function renderTable(tbodySelector, totals, useStackMode) {
+    const tbody = document.querySelector(tbodySelector);
+    tbody.innerHTML = "";
+
+    for (let matName in totals) {
+        if (totals[matName] > 0 && matName !== "金錢") {
+            let tr = document.createElement("tr");
+            let displayVal = formatQuantity(totals[matName], useStackMode);
+            tr.innerHTML = `
+                <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
+                <td><b>${matName}</b></td>
+                <td>${displayVal}</td>
+                <td><input type="text" class="note-input" placeholder="輸入自訂備註..."></td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    if (totals["金錢"] > 0) {
+        let tr = document.createElement("tr");
+        tr.className = "money-row";
+        tr.innerHTML = `
+            <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
+            <td><b>💰 金錢 (Coins)</b></td>
+            <td><b>$ ${totals["金錢"].toLocaleString()}</b></td>
+            <td></td>
+        `;
+        tbody.appendChild(tr);
     }
 }
 
@@ -534,6 +602,7 @@ function validateAndCalculate() {
     calculate();
 }
 
+// 專門計算一枚指定階數經驗戒指所需的材料
 function addSingleRingMaterials(totals, targetRingTier) {
     const ringData = gameData["經驗戒指"].data;
     for (let t = 0; t < targetRingTier; t++) {
@@ -564,6 +633,7 @@ function calculate() {
     const itemInfo = gameData[itemName];
     
     let totals = {};
+    let ringTotals = {};
     let infoMsg = `計算範圍：持有 <b>${itemInfo.stages[startIdx]}</b> ➔ 目標升至 <b>${itemInfo.stages[endIdx]}</b>`;
 
     if (itemName === "經驗戒指") {
@@ -607,40 +677,22 @@ function calculate() {
             for (let i = startIdx; i < endIdx; i++) {
                 let consumedRingTier = itemInfo.ringMapping[i + 1];
                 if (consumedRingTier > 0) {
-                    addSingleRingMaterials(totals, consumedRingTier);
+                    addSingleRingMaterials(ringTotals, consumedRingTier);
                 }
             }
         }
     }
 
     document.getElementById("infoText").innerHTML = infoMsg;
-    const tbody = document.querySelector("#resultTable tbody");
-    tbody.innerHTML = "";
+    renderTable("#resultTable tbody", totals, useStackMode);
 
-    for (let matName in totals) {
-        if (totals[matName] > 0 && matName !== "金錢") {
-            let tr = document.createElement("tr");
-            let displayVal = formatQuantity(totals[matName], useStackMode);
-            tr.innerHTML = `
-                <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
-                <td><b>${matName}</b></td>
-                <td>${displayVal}</td>
-                <td><input type="text" class="note-input" placeholder="輸入自訂備註..."></td>
-            `;
-            tbody.appendChild(tr);
-        }
-    }
-
-    if (totals["金錢"] > 0) {
-        let tr = document.createElement("tr");
-        tr.className = "money-row";
-        tr.innerHTML = `
-            <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
-            <td><b>💰 金錢 (Coins)</b></td>
-            <td><b>$ ${totals["金錢"].toLocaleString()}</b></td>
-            <td></td>
-        `;
-        tbody.appendChild(tr);
+    // 處理究極經驗專屬的戒指材料區塊顯示/隱藏
+    const ringSection = document.getElementById("ringResultSection");
+    if (itemName === "究極經驗" && Object.keys(ringTotals).length > 0) {
+        ringSection.style.display = "block";
+        renderTable("#ringResultTable tbody", ringTotals, useStackMode);
+    } else {
+        ringSection.style.display = "none";
     }
 }
 
@@ -692,34 +744,7 @@ function calculateGem() {
     }
 
     document.getElementById("gemInfoText").innerHTML = `製作目標：<b>${gemType} (${stageName})</b> × <b>${count}</b> 個`;
-    const tbody = document.querySelector("#gemResultTable tbody");
-    tbody.innerHTML = "";
-
-    for (let matName in totals) {
-        if (totals[matName] > 0 && matName !== "金錢") {
-            let tr = document.createElement("tr");
-            let displayVal = formatQuantity(totals[matName], useStackMode);
-            tr.innerHTML = `
-                <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
-                <td><b>${matName}</b></td>
-                <td>${displayVal}</td>
-                <td><input type="text" class="note-input" placeholder="輸入自訂備註..."></td>
-            `;
-            tbody.appendChild(tr);
-        }
-    }
-
-    if (totals["金錢"] > 0) {
-        let tr = document.createElement("tr");
-        tr.className = "money-row";
-        tr.innerHTML = `
-            <td style="text-align: center;"><button class="del-btn" onclick="deleteRow(this)">刪除</button></td>
-            <td><b>💰 金錢 (Coins)</b></td>
-            <td><b>$ ${totals["金錢"].toLocaleString()}</b></td>
-            <td></td>
-        `;
-        tbody.appendChild(tr);
-    }
+    renderTable("#gemResultTable tbody", totals, useStackMode);
 }
 </script>
 
